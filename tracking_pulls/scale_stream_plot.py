@@ -1,4 +1,6 @@
 import time
+import datetime
+import h5py as hp
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -185,12 +187,22 @@ if __name__ == '__main__':
 
     true_max = max(scale.wdata)
     print(f'Max weight pulled was {true_max} kg.')
-    plt.clf()
-    ax.plot(scale.tdata, scale.wdata)
-    plt.show()
-
+    current_date = datetime.datetime.fromtimestamp(time.time())
+    day_month_year = f'{current_date.day}-{current_date.month}-{current_date.year}'
+    hour_min_sec = f'{current_data.hour}:{current_date.min}:{current_date.second}'
+    arm_used = input('Which arm? (left/right/both):')
+    hold_size = input('Size of hold (in mm):')
+    name_of_user = input('Name:')
+    data_file = 'recorded_data.hdf5'
+    print(f'Saving data to {data_file}')
+    with hp.File('./' + data_file, 'r+') as hfile:
+        grp = hfile.create_group(day_month_year + "/" + hour_min_sec)
+        grp['arm_used'] = arm_used
+        grp['hold_size_mm'] = hold_size
+        grp['name'] = name_of_user
+        grp['wdata'] = scale.wdata
+        grp['sample_rate'] = 1/scale.dt
         
-    
 # Maybe I can make the moving/updating frame work later. For now the x-axis is static while the line gets plotted        
 """            
     def update(self, w):
