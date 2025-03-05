@@ -170,7 +170,15 @@ class Scale:
             raw = self.arduino.read_until()
             t, W = self.parse_raw(raw)
             yield W
-        
+
+def derivative(xvalue, yvalue):
+    ydiff = np.array(yvalue[1:]) - np.array(yvalue[:-1])
+    xdiff = np.array(xvalue[1:]) - np.array(xvalue[:-1])
+    return ydiff/xdiff
+
+def print_stats(max_weight, max_force_gen):
+    print(f'Max weight pulled was {true_max} kg -- {true_max*2.205:.2f} lbs.')
+    print(f'Max rate of force generation was {max_force_gen:.2f} kg/s -- {max_force_gen*2.205:.2f} lbs/s')
 
 if __name__ == '__main__':
     fig, ax = plt.subplots()
@@ -183,29 +191,20 @@ if __name__ == '__main__':
         ani = anim.FuncAnimation(fig, scale.update, scale.daq_stream, interval=100, blit=True, cache_frame_data=False)
         plt.show()
 
+    slope = derivative(scale.tdata, scale.wdata)
+    second_derivative = derivative(scale.tdata[:-1], slope)
     true_max = max(scale.wdata)
-    print(f'Max weight pulled was {true_max} kg.')
-    plt.clf()
-    ax.plot(scale.tdata, scale.wdata)
-    plt.show()
+    max_force_gen = max(slope)
+    min_force_gen = min(slope)
+    max_index = np.argmax(slope)
+    min_index = np.argmin(slope)
+    fig, ax = plt.subplots(2,1)
+    ax[0].plot(scale.tdata, scale.wdata)
+    ax[0].fill_between(scale.tdata[max_index:min_index], scale.wdata[max_index:min_index], alpha=0.5)
+    ax[1].plot(scale.tdata[:-1], slope, label='1st Derivative')
+    ax[1].plot(scale.tdata[1:-1], second_derivative, label='2nd Derivative')
+    plt.show(block=True)
+    print_stats(true_max, max_force_gen)
+
 
         
-    
-# Maybe I can make the moving/updating frame work later. For now the x-axis is static while the line gets plotted        
-"""            
-    def update(self, w):
-        ''' Update the data by shifting the oldest data out and pushing the newest weight into the last slot.'''
-        if self.debug:
-            print(f'w is {w}')
-        self.tdata = shift(self.tdata, -1, cval=self.tdata[-1] + 0.1)
-        self.wdata = shift(self.wdata, -1, cval=w)
-        if w > self.maxw:
-            self.maxw = w + 5
-            self.ax.set_ylim(0, self.maxw)
-        self.xlow += self.dt
-        self.xhigh += self.dt
-        self.ax.set_xlim(self.xlow, self.xhigh)
-        self.line.set_data(self.tdata, self.wdata)
-        return self.line,
-"""
-    

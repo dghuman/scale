@@ -173,7 +173,11 @@ class Scale:
             t, W = self.parse_raw(raw)
             yield W
         
-
+def derivative(xvalue, yvalue):
+    ydiff = np.array(yvalue[1:]) - np.array(yvalue[:-1])
+    xdiff = np.array(xvalue[1:]) - np.array(xvalue[:-1])
+    return ydiff/xdiff
+            
 if __name__ == '__main__':
     fig, ax = plt.subplots()
     scale = Scale(ax, 10, debug=True)
@@ -187,9 +191,21 @@ if __name__ == '__main__':
 
     true_max = max(scale.wdata)
     print(f'Max weight pulled was {true_max} kg.')
+    slope = derivative(scale.tdata, scale.wdata)
+    second_derivative = derivative(scale.tdata[:-1], slope)
+    max_force_gen = max(slope)
+    min_force_gen = min(slope)
+    max_index = np.argmax(slope)
+    min_index = np.argmin(slope)
+    fig, ax = plt.subplots(2,1)
+    ax[0].plot(scale.tdata, scale.wdata)
+    ax[0].fill_between(scale.tdata[max_index:min_index], scale.wdata[max_index:min_index], alpha=0.5)
+    ax[1].plot(scale.tdata[:-1], slope, label='1st Derivative')
+    ax[1].plot(scale.tdata[1:-1], second_derivative, label='2nd Derivative')
+    plt.show(block=True)
     current_date = datetime.datetime.fromtimestamp(time.time())
     day_month_year = f'{current_date.day}-{current_date.month}-{current_date.year}'
-    hour_min_sec = f'{current_data.hour}:{current_date.min}:{current_date.second}'
+    hour_min_sec = f'{current_date.hour}:{current_date.min}:{current_date.second}'
     arm_used = input('Which arm? (left/right/both):')
     hold_size = input('Size of hold (in mm):')
     name_of_user = input('Name:')
@@ -197,27 +213,8 @@ if __name__ == '__main__':
     print(f'Saving data to {data_file}')
     with hp.File('./' + data_file, 'r+') as hfile:
         grp = hfile.create_group(day_month_year + "/" + hour_min_sec)
-        grp['arm_used'] = arm_used
-        grp['hold_size_mm'] = hold_size
-        grp['name'] = name_of_user
+        grp.attrs['arm_used'] = str(arm_used)
+        grp.attrs['hold_size_mm'] = hold_size
+        grp.attrs['name'] = str(name_of_user)
         grp['wdata'] = scale.wdata
-        grp['sample_rate'] = 1/scale.dt
-        
-# Maybe I can make the moving/updating frame work later. For now the x-axis is static while the line gets plotted        
-"""            
-    def update(self, w):
-        ''' Update the data by shifting the oldest data out and pushing the newest weight into the last slot.'''
-        if self.debug:
-            print(f'w is {w}')
-        self.tdata = shift(self.tdata, -1, cval=self.tdata[-1] + 0.1)
-        self.wdata = shift(self.wdata, -1, cval=w)
-        if w > self.maxw:
-            self.maxw = w + 5
-            self.ax.set_ylim(0, self.maxw)
-        self.xlow += self.dt
-        self.xhigh += self.dt
-        self.ax.set_xlim(self.xlow, self.xhigh)
-        self.line.set_data(self.tdata, self.wdata)
-        return self.line,
-"""
-    
+        grp.attrs['sample_rate'] = 1/scale.dt
